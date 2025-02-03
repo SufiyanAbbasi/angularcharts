@@ -8,11 +8,9 @@ import jsPDF from 'jspdf'
   styleUrls: ['./chart.component.scss']
 })
 export class ChartComponent {
-
   downloadChartAndTablesAsPDF(): void {
     const pdf = new jsPDF('portrait', 'mm', 'a4')
   
-    //  1️⃣ Create an in-memory canvas (NOT in the DOM)
     const chartCanvas = document.createElement('canvas')
     chartCanvas.width = 500
     chartCanvas.height = 300
@@ -38,52 +36,57 @@ export class ChartComponent {
     setTimeout(() => {
       const chartImage = chartCanvas.toDataURL('image/png')
   
-      // Make sure the chart is not added to DOM
-      if (chartCanvas.parentNode) {
-        chartCanvas.parentNode.removeChild(chartCanvas)
-      }
+      // Add the chart image with the same width as the table cells
+      const imgWidth = 120  // Set the width of the chart image (50% of A4 page width)
+      const imgHeight = (chartCanvas.height * imgWidth) / chartCanvas.width
+      pdf.addImage(chartImage, 'PNG', 10, 10, imgWidth, imgHeight)
   
-      pdf.addImage(chartImage, 'PNG', 10, 10, 150, 100) // 📌 Reduced Graph Size
-  
-      // 2️⃣ Generate Table (Salary)
-      let yPos = 120
+      // Generate Salary Table
+      let yPos = imgHeight + 20  // Position the table just below the chart
       this.addTableToPDF(pdf, [
         ['Position', 'Min Salary', 'Max Salary'],
         ['Junior Developer', '$40,000', '$60,000'],
         ['Senior Developer', '$70,000', '$100,000']
-      ], yPos)
+      ], yPos, imgWidth)
   
-      // 3️⃣ Generate Second Table (Departments)
-      yPos += 40
+      // Generate Department Table
+      yPos += 40  // Move the second table down
       this.addTableToPDF(pdf, [
         ['Department', 'Employees'],
         ['Engineering', '50'],
         ['Marketing', '20'],
         ['HR', '15']
-      ], yPos)
+      ], yPos, imgWidth)
   
-      // 4️⃣ Open PDF in new tab
+      // Open PDF in new tab and print
       const pdfBlob = pdf.output('blob')
       const pdfUrl = URL.createObjectURL(pdfBlob)
       setTimeout(() => {
         const printWindow = window.open(pdfUrl, '_blank')
         printWindow?.print()
       }, 1000)
-  
     }, 500)
   }
   
-  // 🔹 Helper function to add tables
-  private addTableToPDF(pdf: jsPDF, data: string[][], startY: number) {
-    let x = 10
-    const cellWidth = 60, cellHeight = 10
-
+  // Helper function to add tables with consistent width
+  private addTableToPDF(pdf: jsPDF, data: string[][], startY: number, tableWidth: number) {
+    const x = 10
+    const cellWidth = tableWidth / 3  // Divide the table width evenly into 3 columns
+    const cellHeight = 12           // Set cell height to avoid overlap
+    const fontSize = 10             // Adjust font size for readability
+  
+    pdf.setFontSize(fontSize)  // Set a consistent font size for all text
+  
     data.forEach((row, rowIndex) => {
       row.forEach((cell, cellIndex) => {
-        pdf.rect(x + cellIndex * cellWidth, startY + rowIndex * cellHeight, cellWidth, cellHeight) // Border
-        pdf.text(cell, x + 5 + cellIndex * cellWidth, startY + 7 + rowIndex * cellHeight) // Text
+        // Draw a border for each cell
+        pdf.rect(x + cellIndex * cellWidth, startY + rowIndex * cellHeight, cellWidth, cellHeight)
+  
+        // Adjust text position to avoid overlapping with borders
+        pdf.text(cell, x + 5 + cellIndex * cellWidth, startY + 7 + rowIndex * cellHeight) 
       })
     })
   }
+    
 }
 
